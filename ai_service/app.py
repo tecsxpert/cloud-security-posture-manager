@@ -10,9 +10,11 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
+
 def create_app():
     app = Flask(__name__)
 
+    # ── Rate limiter ──────────────────────────────────────────────────────────
     Limiter(
         get_remote_address,
         app=app,
@@ -20,6 +22,7 @@ def create_app():
         storage_uri="memory://",
     )
 
+    # ── Register blueprints ───────────────────────────────────────────────────
     from routes.describe  import describe_bp
     from routes.recommend import recommend_bp
     from routes.report    import report_bp
@@ -30,6 +33,14 @@ def create_app():
     app.register_blueprint(report_bp)
     app.register_blueprint(health_bp)
 
+    # ── Apply security headers to ALL responses ───────────────────────────────
+    from services.security_headers import apply_security_headers
+
+    @app.after_request
+    def add_security_headers(response):
+        return apply_security_headers(response)
+
+    # ── Root route ────────────────────────────────────────────────────────────
     @app.route("/", methods=["GET"])
     def home():
         return jsonify({
@@ -43,19 +54,30 @@ def create_app():
             ]
         }), 200
 
+    # ── Error handlers ────────────────────────────────────────────────────────
     @app.errorhandler(404)
     def not_found(e):
-        return jsonify({"error": "Endpoint not found", "status": 404}), 404
+        return jsonify({
+            "error":  "Endpoint not found",
+            "status": 404
+        }), 404
 
     @app.errorhandler(429)
     def rate_limit_exceeded(e):
-        return jsonify({"error": "Rate limit exceeded", "status": 429}), 429
+        return jsonify({
+            "error":  "Rate limit exceeded. Max 30 requests/min.",
+            "status": 429
+        }), 429
 
     @app.errorhandler(500)
     def internal_error(e):
-        return jsonify({"error": "Internal server error", "status": 500}), 500
+        return jsonify({
+            "error":  "Internal server error",
+            "status": 500
+        }), 500
 
     return app
+
 
 app = create_app()
 
