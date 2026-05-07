@@ -5,6 +5,10 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import SecurityRecords from './pages/SecurityRecords';
 
+import CreateRecord from './pages/CreateRecord';
+import EditRecord from './pages/EditRecord';
+import AuditLogs from './pages/AuditLogs';
+
 // Placeholder for missing pages
 const Placeholder = ({ title }) => (
   <div className="flex items-center justify-center h-full text-center">
@@ -26,7 +30,9 @@ function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/records" element={<SecurityRecords />} />
-        <Route path="/audit-logs" element={<Placeholder title="Audit Logs" />} />
+        <Route path="/records/create" element={<CreateRecord />} />
+        <Route path="/records/edit/:id" element={<EditRecord />} />
+        <Route path="/audit-logs" element={<AuditLogs />} />
         <Route path="/analytics" element={<Placeholder title="Analytics" />} />
       </Route>
       
