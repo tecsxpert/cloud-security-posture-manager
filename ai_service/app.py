@@ -38,6 +38,7 @@ def create_app():
 
     @app.after_request
     def add_security_headers(response):
+        response.headers["Server"] = "SecureServer"
         return apply_security_headers(response)
 
     # ── Pre-load sentence-transformers ────────────────────────────────────────
