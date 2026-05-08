@@ -4,12 +4,9 @@ import { Search, Plus, Edit2, Filter, Download, Upload, Loader2 } from 'lucide-r
 import { useNavigate } from 'react-router-dom';
 import PageTransition from '../components/PageTransition';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
 
-const fallbackData = [
-  { id: 'REC-001', resourceName: 'aws-ec2-web-01', resourceType: 'Compute', severity: 'High', status: 'Open', detectedAt: '2023-10-25' },
-  { id: 'REC-002', resourceName: 's3-customer-data', resourceType: 'Storage', severity: 'Critical', status: 'Open', detectedAt: '2023-10-24' },
-  { id: 'REC-003', resourceName: 'rds-prod-db', resourceType: 'Database', severity: 'Medium', status: 'Resolved', detectedAt: '2023-10-23' },
-];
+const fallbackData = [];
 
 const severityColors = {
   Critical: 'text-rose-400 bg-rose-400/10 border-rose-400/20',
@@ -26,6 +23,7 @@ const statusColors = {
 
 export default function SecurityRecords() {
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +36,6 @@ export default function SecurityRecords() {
     try {
       setLoading(true);
       const res = await api.get('/api/records');
-      // If spring boot pageable
       if (res.data && res.data.content) {
         setRecords(res.data.content);
       } else {
@@ -61,8 +58,31 @@ export default function SecurityRecords() {
       link.setAttribute('download', 'security_records.csv');
       document.body.appendChild(link);
       link.click();
+      addToast('Export successful!', 'success');
     } catch (err) {
-      alert("Export failed. Make sure backend is running.");
+      addToast('Export failed. Make sure backend is running.', 'error');
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      setLoading(true);
+      await api.post('/api/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      addToast('File uploaded successfully!', 'success');
+      fetchRecords();
+    } catch (err) {
+      addToast('Upload failed. Make sure backend is running.', 'error');
+    } finally {
+      setLoading(false);
+      e.target.value = null;
     }
   };
 
@@ -91,7 +111,7 @@ export default function SecurityRecords() {
           <label className="flex items-center px-4 py-2 bg-white/5 text-white rounded-xl text-sm border border-white/10 hover:bg-white/10 transition-all cursor-pointer">
             <Upload className="w-4 h-4 mr-2" />
             Upload File
-            <input type="file" className="hidden" />
+            <input type="file" className="hidden" onChange={handleFileUpload} accept=".csv,.json" />
           </label>
 
           <motion.button
@@ -129,6 +149,10 @@ export default function SecurityRecords() {
           {loading ? (
             <div className="flex items-center justify-center h-full">
                <Loader2 className="w-8 h-8 text-[var(--color-accent)] animate-spin" />
+            </div>
+          ) : records.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-[var(--color-text-muted)]">
+               No records found
             </div>
           ) : (
             <table className="w-full text-left border-collapse">

@@ -4,11 +4,12 @@ import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../services/api';
 import PageTransition from '../components/PageTransition';
+import { useToast } from '../context/ToastContext';
 
 export default function CreateRecord() {
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     resourceName: '',
     resourceType: 'Compute',
@@ -23,13 +24,12 @@ export default function CreateRecord() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     try {
-      // API call to backend
       await api.post('/api/records', formData);
+      addToast('Record created successfully!', 'success');
       navigate('/records');
     } catch (err) {
-      setError('Failed to create record. Please try again.');
+      addToast('Failed to create record. Please try again.', 'error');
       setLoading(false);
     }
   };
@@ -52,12 +52,6 @@ export default function CreateRecord() {
       </div>
 
       <div className="glass-panel rounded-2xl p-6">
-        {error && (
-          <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm">
-            {error}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <label className="text-sm font-medium text-white">Resource Name</label>

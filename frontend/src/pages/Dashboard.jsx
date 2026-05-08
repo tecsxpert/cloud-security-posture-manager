@@ -1,33 +1,58 @@
-import { Shield, AlertTriangle, CheckCircle, Activity } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Shield, AlertTriangle, CheckCircle, Activity, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import PageTransition from '../components/PageTransition';
+import api from '../services/api';
 
-const areaData = [
-  { name: 'Mon', high: 4, medium: 12, low: 24 },
-  { name: 'Tue', high: 3, medium: 15, low: 22 },
-  { name: 'Wed', high: 7, medium: 10, low: 28 },
-  { name: 'Thu', high: 2, medium: 18, low: 20 },
-  { name: 'Fri', high: 6, medium: 14, low: 30 },
-  { name: 'Sat', high: 1, medium: 8, low: 15 },
-  { name: 'Sun', high: 3, medium: 11, low: 18 },
-];
+const fallbackAreaData = [];
 
-const pieData = [
-  { name: 'AWS', value: 45 },
-  { name: 'Azure', value: 30 },
-  { name: 'GCP', value: 25 },
-];
+const fallbackPieData = [];
+
 const COLORS = ['#00f0ff', '#3b82f6', '#8b5cf6'];
 
-const kpis = [
-  { title: 'Security Score', value: '85%', icon: Shield, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
-  { title: 'Critical Alerts', value: '7', icon: AlertTriangle, color: 'text-rose-400', bg: 'bg-rose-400/10' },
-  { title: 'Compliant Assets', value: '1,204', icon: CheckCircle, color: 'text-[var(--color-accent)]', bg: 'bg-[var(--color-accent)]/10' },
-  { title: 'Active Threats', value: '3', icon: Activity, color: 'text-amber-400', bg: 'bg-amber-400/10' },
+const fallbackKpis = [
+  { title: 'Security Score', value: '0%', icon: 'Shield', color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
+  { title: 'Critical Alerts', value: '0', icon: 'AlertTriangle', color: 'text-rose-400', bg: 'bg-rose-400/10' },
+  { title: 'Compliant Assets', value: '0', icon: 'CheckCircle', color: 'text-[var(--color-accent)]', bg: 'bg-[var(--color-accent)]/10' },
+  { title: 'Active Threats', value: '0', icon: 'Activity', color: 'text-amber-400', bg: 'bg-amber-400/10' },
 ];
 
+const iconMap = { Shield, AlertTriangle, CheckCircle, Activity };
+
 export default function Dashboard() {
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState({
+    areaData: fallbackAreaData,
+    pieData: fallbackPieData,
+    kpis: fallbackKpis,
+    recentAlerts: []
+  });
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const res = await api.get('/api/dashboard/stats');
+        if (res.data) setDashboardData(res.data);
+      } catch (err) {
+        console.error("Using fallback dashboard data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 text-[var(--color-accent)] animate-spin" />
+      </div>
+    );
+  }
+
+  const { areaData, pieData, kpis, recentAlerts } = dashboardData;
+
   return (
     <PageTransition className="space-y-6">
       <div className="flex justify-between items-end">
@@ -39,26 +64,29 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpis.map((kpi, index) => (
-          <motion.div
-            key={kpi.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="glass-panel p-6 rounded-2xl relative overflow-hidden group hover:border-[var(--color-accent)]/50 transition-colors"
-          >
-            <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full ${kpi.bg} blur-2xl group-hover:scale-150 transition-transform duration-500`} />
-            <div className="flex justify-between items-start relative z-10">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text-muted)] mb-1">{kpi.title}</p>
-                <h3 className="text-3xl font-bold text-white">{kpi.value}</h3>
+        {kpis.map((kpi, index) => {
+          const IconComponent = iconMap[kpi.icon] || Shield;
+          return (
+            <motion.div
+              key={kpi.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="glass-panel p-6 rounded-2xl relative overflow-hidden group hover:border-[var(--color-accent)]/50 transition-colors"
+            >
+              <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full ${kpi.bg} blur-2xl group-hover:scale-150 transition-transform duration-500`} />
+              <div className="flex justify-between items-start relative z-10">
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-text-muted)] mb-1">{kpi.title}</p>
+                  <h3 className="text-3xl font-bold text-white">{kpi.value}</h3>
+                </div>
+                <div className={`p-3 rounded-xl ${kpi.bg}`}>
+                  <IconComponent className={`w-6 h-6 ${kpi.color}`} />
+                </div>
               </div>
-              <div className={`p-3 rounded-xl ${kpi.bg}`}>
-                <kpi.icon className={`w-6 h-6 ${kpi.color}`} />
-              </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* Charts */}
@@ -172,13 +200,13 @@ export default function Dashboard() {
         >
           <h3 className="text-lg font-semibold text-white mb-4">Recent Alerts</h3>
           <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-[var(--color-accent)]/30 transition-colors flex items-start gap-4">
-                <div className={`mt-1 w-2 h-2 rounded-full shadow-[0_0_8px_var(--color-danger)] bg-[var(--color-danger)]`} />
+            {recentAlerts.map((alert) => (
+              <div key={alert.id} className="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-[var(--color-accent)]/30 transition-colors flex items-start gap-4">
+                <div className={`mt-1 w-2 h-2 rounded-full shadow-[0_0_8px_var(--color-danger)] bg-[var(--color-danger)] flex-shrink-0`} />
                 <div>
-                  <h4 className="text-sm font-medium text-white">Unauthorized Access Attempt</h4>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-1">Instance i-0x892a7... detected multiple failed logins.</p>
-                  <span className="text-[10px] text-gray-500 mt-2 block">10 mins ago</span>
+                  <h4 className="text-sm font-medium text-white">{alert.title}</h4>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1">{alert.desc}</p>
+                  <span className="text-[10px] text-gray-500 mt-2 block">{alert.time}</span>
                 </div>
               </div>
             ))}

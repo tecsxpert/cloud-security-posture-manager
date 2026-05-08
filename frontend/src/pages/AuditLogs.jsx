@@ -1,17 +1,40 @@
-import { useState } from 'react';
-import { Search, Clock, User, ShieldAlert } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Clock, User, ShieldAlert, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import PageTransition from '../components/PageTransition';
+import api from '../services/api';
 
-const mockLogs = [
-  { id: 1, action: 'Created Security Record', entity: 'aws-ec2-web-01', user: 'admin@enterprise.com', time: '10 mins ago', type: 'create' },
-  { id: 2, action: 'Updated Severity', entity: 's3-customer-data', user: 'security_ops@enterprise.com', time: '1 hour ago', type: 'update' },
-  { id: 3, action: 'Resolved Vulnerability', entity: 'rds-prod-db', user: 'admin@enterprise.com', time: '3 hours ago', type: 'resolve' },
-  { id: 4, action: 'Deleted Record', entity: 'aks-cluster-01', user: 'admin@enterprise.com', time: '1 day ago', type: 'delete' },
-];
+const fallbackLogs = [];
 
 export default function AuditLogs() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const res = await api.get('/api/audit-logs');
+        if (res.data && res.data.content) {
+          setLogs(res.data.content);
+        } else {
+          setLogs(res.data || fallbackLogs);
+        }
+      } catch (err) {
+        console.error("Using fallback audit logs data");
+        setLogs(fallbackLogs);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLogs();
+  }, []);
+
+  const filteredLogs = logs.filter(log => 
+    log.action.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    log.entity.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    log.user.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <PageTransition className="space-y-6 h-full flex flex-col">
@@ -35,36 +58,42 @@ export default function AuditLogs() {
         </div>
 
         <div className="flex-1 overflow-auto space-y-4 pr-2">
-          {mockLogs.map((log, i) => (
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.1 }}
-              key={log.id} 
-              className="p-4 rounded-xl bg-white/5 border border-white/5 flex items-start gap-4 hover:border-white/20 transition-all"
-            >
-              <div className="p-2 bg-[#131b2f] rounded-lg border border-white/10 mt-1">
-                {log.type === 'create' ? <ShieldAlert className="w-5 h-5 text-emerald-400" /> : 
-                 log.type === 'delete' ? <ShieldAlert className="w-5 h-5 text-rose-400" /> :
-                 <ShieldAlert className="w-5 h-5 text-[var(--color-accent)]" />}
-              </div>
-              
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-white">{log.action}</h4>
-                  <div className="flex items-center text-xs text-[var(--color-text-muted)]">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {log.time}
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+               <Loader2 className="w-8 h-8 text-[var(--color-accent)] animate-spin" />
+            </div>
+          ) : (
+            filteredLogs.map((log, i) => (
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                key={log.id} 
+                className="p-4 rounded-xl bg-white/5 border border-white/5 flex items-start gap-4 hover:border-white/20 transition-all"
+              >
+                <div className="p-2 bg-[#131b2f] rounded-lg border border-white/10 mt-1">
+                  {log.type === 'create' ? <ShieldAlert className="w-5 h-5 text-emerald-400" /> : 
+                   log.type === 'delete' ? <ShieldAlert className="w-5 h-5 text-rose-400" /> :
+                   <ShieldAlert className="w-5 h-5 text-[var(--color-accent)]" />}
+                </div>
+                
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-white">{log.action}</h4>
+                    <div className="flex items-center text-xs text-[var(--color-text-muted)]">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {log.time}
+                    </div>
+                  </div>
+                  <p className="text-sm text-[var(--color-text-muted)] mt-1">Resource: <span className="text-white font-medium">{log.entity}</span></p>
+                  <div className="flex items-center text-xs text-[var(--color-text-muted)] mt-2 bg-[#131b2f] w-fit px-2 py-1 rounded-md border border-white/5">
+                    <User className="w-3 h-3 mr-1" />
+                    {log.user}
                   </div>
                 </div>
-                <p className="text-sm text-[var(--color-text-muted)] mt-1">Resource: <span className="text-white font-medium">{log.entity}</span></p>
-                <div className="flex items-center text-xs text-[var(--color-text-muted)] mt-2 bg-[#131b2f] w-fit px-2 py-1 rounded-md border border-white/5">
-                  <User className="w-3 h-3 mr-1" />
-                  {log.user}
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ))
+          )}
         </div>
       </div>
     </PageTransition>

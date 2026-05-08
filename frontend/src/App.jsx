@@ -8,16 +8,7 @@ import SecurityRecords from './pages/SecurityRecords';
 import CreateRecord from './pages/CreateRecord';
 import EditRecord from './pages/EditRecord';
 import AuditLogs from './pages/AuditLogs';
-
-// Placeholder for missing pages
-const Placeholder = ({ title }) => (
-  <div className="flex items-center justify-center h-full text-center">
-    <div>
-      <h2 className="text-2xl font-bold text-white mb-2">{title}</h2>
-      <p className="text-[var(--color-text-muted)]">This page is under construction.</p>
-    </div>
-  </div>
-);
+import Analytics from './pages/Analytics';
 
 function App() {
   return (
@@ -33,7 +24,7 @@ function App() {
         <Route path="/records/create" element={<CreateRecord />} />
         <Route path="/records/edit/:id" element={<EditRecord />} />
         <Route path="/audit-logs" element={<AuditLogs />} />
-        <Route path="/analytics" element={<Placeholder title="Analytics" />} />
+        <Route path="/analytics" element={<Analytics />} />
       </Route>
       
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
